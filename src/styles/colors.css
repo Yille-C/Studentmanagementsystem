@@ -1,0 +1,66 @@
+/* Color Palette Variables */
+:root {
+  --primary: #0F4C75;
+  --secondary: #3282B8;
+  --background: #F8F9FA;
+  --surface: #FFFFFF;
+  --text: #1B262C;
+  --accent: #FFD700;
+  --accent-hover: #E6C200;
+}
+
+/* Custom utility classes for the color palette */
+.bg-primary {
+  background-color: var(--primary);
+}
+
+.bg-secondary {
+  background-color: var(--secondary);
+}
+
+.bg-background {
+  background-color: var(--background);
+}
+
+.bg-accent {
+  background-color: var(--accent);
+}
+
+.text-primary {
+  color: var(--primary);
+}
+
+.text-secondary {
+  color: var(--secondary);
+}
+
+.text-main {
+  color: var(--text);
+}
+
+.text-accent {
+  color: var(--accent);
+}
+
+.border-secondary {
+  border-color: var(--secondary);
+}
+
+/* Button styles */
+.btn-accent {
+  background-color: var(--accent);
+  color: #000;
+}
+
+.btn-accent:hover {
+  background-color: var(--accent-hover);
+}
+
+.btn-primary {
+  background-color: var(--secondary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary);
+}
