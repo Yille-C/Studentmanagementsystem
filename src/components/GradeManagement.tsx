@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Student, Grade } from '../App';
 import { Plus, Calculator, TrendingUp } from 'lucide-react';
+import api from '../services/api';
 
 interface GradeManagementProps {
   students: Student[];
@@ -17,30 +18,44 @@ export function GradeManagement({ students, grades, setGrades }: GradeManagement
     quizzes: '',
     projects: '',
   });
+  const [loading, setLoading] = useState(false);
 
   const computeFinalGrade = (grade: Omit<Grade, 'finalGrade'>): number => {
-    // Weighted average: Midterm 30%, Finals 40%, Quizzes 15%, Projects 15%
+    // Weighted average: Midterm 25%, Finals 35%, Quizzes 20%, Projects 20%
     return (
-      grade.midterm * 0.3 +
-      grade.finals * 0.4 +
-      grade.quizzes * 0.15 +
-      grade.projects * 0.15
+      grade.midterm * 0.25 +
+      grade.finals * 0.35 +
+      grade.quizzes * 0.20 +
+      grade.projects * 0.20
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newGrade: Grade = {
-      studentId: formData.studentId,
-      subject: formData.subject,
-      midterm: parseFloat(formData.midterm),
-      finals: parseFloat(formData.finals),
-      quizzes: parseFloat(formData.quizzes),
-      projects: parseFloat(formData.projects),
-    };
-    newGrade.finalGrade = computeFinalGrade(newGrade);
-    setGrades([...grades, newGrade]);
-    setFormData({ studentId: '', subject: '', midterm: '', finals: '', quizzes: '', projects: '' });
+    setLoading(true);
+    
+    try {
+      const gradeData = {
+        studentId: formData.studentId,
+        subject: formData.subject,
+        midterm: parseFloat(formData.midterm),
+        finals: parseFloat(formData.finals),
+        quizzes: parseFloat(formData.quizzes),
+        projects: parseFloat(formData.projects),
+      };
+      
+      const response = await api.addGrade(gradeData);
+      
+      if (response.success) {
+        setGrades([...grades, response.grade]);
+        setFormData({ studentId: '', subject: '', midterm: '', finals: '', quizzes: '', projects: '' });
+        alert('Grade added successfully!');
+      }
+    } catch (error: any) {
+      alert('Error: ' + (error.message || 'Failed to add grade'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const computeStatistics = () => {

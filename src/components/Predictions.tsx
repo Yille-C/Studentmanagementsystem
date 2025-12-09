@@ -1,13 +1,66 @@
+import { useState, useEffect } from 'react';
 import { Student, Grade } from '../App';
 import { TrendingUp, Target, AlertCircle } from 'lucide-react';
+import api from '../services/api';
 
 interface PredictionsProps {
   students: Student[];
   grades: Grade[];
 }
 
+interface PredictionData {
+  studentId: string;
+  subject: string;
+  predicted_grade: number;
+  trend: string;
+  confidence: string;
+}
+
 export function Predictions({ students, grades }: PredictionsProps) {
+  const [predictions, setPredictions] = useState<PredictionData[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<string>('');
+
+  useEffect(() => {
+    if (selectedStudent && grades.length > 0) {
+      loadPredictions(selectedStudent);
+    }
+  }, [selectedStudent, grades]);
+
+  const loadPredictions = async (studentId: string) => {
+    setLoading(true);
+    try {
+      // Get unique subjects for this student
+      const studentGrades = grades.filter(g => g.studentId === studentId);
+      const subjects = [...new Set(studentGrades.map(g => g.subject))];
+      
+      if (subjects.length > 0) {
+        // Get prediction for first subject (or iterate through all)
+        const response = await api.predictStudentGrade(studentId, subjects[0]);
+        
+        if (response.success && !response.prediction.error) {
+          setPredictions([{
+            studentId,
+            subject: subjects[0],
+            predicted_grade: response.prediction.predicted_grade,
+            trend: response.prediction.trend,
+            confidence: response.prediction.confidence
+          }]);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load predictions:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const predictNextSemesterGrade = (studentId: string): number | null => {
+    const apiPrediction = predictions.find(p => p.studentId === studentId);
+    if (apiPrediction) {
+      return apiPrediction.predicted_grade;
+    }
+
     const studentGrades = grades
       .filter((g) => g.studentId === studentId)
       .map((g) => g.finalGrade || 0);
@@ -26,12 +79,12 @@ export function Predictions({ students, grades }: PredictionsProps) {
     const trend = secondHalfAvg - firstHalfAvg;
 
     // Predict next semester (current avg + trend)
-    let prediction = avg + trend;
+    let predictedGrade = avg + trend;
     
     // Clamp between 0 and 100
-    prediction = Math.max(0, Math.min(100, prediction));
+    predictedGrade = Math.max(0, Math.min(100, predictedGrade));
 
-    return prediction;
+    return predictedGrade;
   };
 
   const predictPerformancePattern = (studentId: string) => {

@@ -1,5 +1,7 @@
+import { useState, useEffect } from 'react';
 import { Student, Grade, Attendance } from '../App';
 import { TrendingUp, TrendingDown, Award, AlertTriangle, Calendar } from 'lucide-react';
+import api from '../services/api';
 
 interface DataAnalyticsProps {
   students: Student[];
@@ -8,7 +10,34 @@ interface DataAnalyticsProps {
 }
 
 export function DataAnalytics({ students, grades, attendance }: DataAnalyticsProps) {
+  const [analytics, setAnalytics] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    loadAnalytics();
+  }, [grades, attendance]);
+
+  const loadAnalytics = async () => {
+    if (grades.length === 0) return;
+    
+    setLoading(true);
+    try {
+      const response = await api.getClassAnalytics();
+      if (response.success) {
+        setAnalytics(response.analytics);
+      }
+    } catch (error) {
+      console.error('Failed to load analytics:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const computeGradeStatistics = () => {
+    if (analytics) {
+      return { avg: analytics.mean, stdDev: analytics.std_deviation };
+    }
+    
     if (grades.length === 0) return null;
 
     const finalGrades = grades.map((g) => g.finalGrade || 0);

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Student, Attendance } from '../App';
 import { Calendar, Check, X, BarChart2 } from 'lucide-react';
+import api from '../services/api';
 
 interface AttendanceTrackingProps {
   students: Student[];
@@ -11,18 +12,35 @@ interface AttendanceTrackingProps {
 export function AttendanceTracking({ students, attendance, setAttendance }: AttendanceTrackingProps) {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [showSummary, setShowSummary] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const markAttendance = (studentId: string, status: 'present' | 'absent') => {
+  const markAttendance = async (studentId: string, status: 'present' | 'absent') => {
     const existingIndex = attendance.findIndex(
       (a) => a.studentId === studentId && a.date === selectedDate
     );
 
-    if (existingIndex >= 0) {
-      const newAttendance = [...attendance];
-      newAttendance[existingIndex] = { studentId, date: selectedDate, status };
-      setAttendance(newAttendance);
-    } else {
-      setAttendance([...attendance, { studentId, date: selectedDate, status }]);
+    setLoading(true);
+    try {
+      const attendanceData = { studentId, date: selectedDate, status };
+      
+      if (existingIndex >= 0) {
+        // Update existing - for now just add new record
+        const response = await api.addAttendance(attendanceData);
+        if (response.success) {
+          const newAttendance = [...attendance];
+          newAttendance[existingIndex] = response.attendance;
+          setAttendance(newAttendance);
+        }
+      } else {
+        const response = await api.addAttendance(attendanceData);
+        if (response.success) {
+          setAttendance([...attendance, response.attendance]);
+        }
+      }
+    } catch (error: any) {
+      alert('Error: ' + (error.message || 'Failed to mark attendance'));
+    } finally {
+      setLoading(false);
     }
   };
 

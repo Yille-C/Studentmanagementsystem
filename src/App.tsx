@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { LandingPage } from './components/LandingPage';
 import { LoginPage } from './components/LoginPage';
 import { RegisterPage } from './components/RegisterPage';
@@ -11,6 +11,7 @@ import { VisualReports } from './components/VisualReports';
 import { DataPersistence } from './components/DataPersistence';
 import { Users, GraduationCap, Calendar, BarChart3, TrendingUp, PieChart, Database, LogOut } from 'lucide-react';
 import { DashboardLayout } from './components/DashboardLayout';
+import api from './services/api';
 
 export interface Student {
   id: string;
@@ -49,6 +50,39 @@ export default function App() {
   const [students, setStudents] = useState<Student[]>([]);
   const [grades, setGrades] = useState<Grade[]>([]);
   const [attendance, setAttendance] = useState<Attendance[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Load data from backend when dashboard is accessed
+  useEffect(() => {
+    if (view === 'dashboard') {
+      loadAllData();
+    }
+  }, [view]);
+
+  const loadAllData = async () => {
+    setLoading(true);
+    try {
+      const [studentsRes, gradesRes, attendanceRes] = await Promise.all([
+        api.getStudents(),
+        api.getGrades(),
+        api.getAttendance(),
+      ]);
+
+      if (studentsRes.success) {
+        setStudents(studentsRes.students);
+      }
+      if (gradesRes.success) {
+        setGrades(gradesRes.grades);
+      }
+      if (attendanceRes.success) {
+        setAttendance(attendanceRes.attendance);
+      }
+    } catch (error) {
+      console.error('Failed to load data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogin = (email: string, password: string) => {
     // Simple demo authentication - in production, this would validate against a backend

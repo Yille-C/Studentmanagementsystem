@@ -1,5 +1,7 @@
+import { useState, useEffect } from 'react';
 import { Student, Grade, Attendance } from '../App';
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import api from '../services/api';
 
 interface VisualReportsProps {
   students: Student[];
@@ -8,6 +10,44 @@ interface VisualReportsProps {
 }
 
 export function VisualReports({ students, grades, attendance }: VisualReportsProps) {
+  const [charts, setCharts] = useState<{
+    gradeDistribution: string | null;
+    attendance: string | null;
+    classPerformance: string | null;
+  }>({
+    gradeDistribution: null,
+    attendance: null,
+    classPerformance: null,
+  });
+  const [loading, setLoading] = useState(false);
+  const [showBackendCharts, setShowBackendCharts] = useState(false);
+
+  useEffect(() => {
+    if (showBackendCharts && (grades.length > 0 || attendance.length > 0)) {
+      loadBackendCharts();
+    }
+  }, [showBackendCharts, grades, attendance]);
+
+  const loadBackendCharts = async () => {
+    setLoading(true);
+    try {
+      const [distChart, attChart, perfChart] = await Promise.all([
+        api.getGradeDistributionChart(),
+        api.getAttendanceChart(),
+        api.getClassPerformanceChart(),
+      ]);
+
+      setCharts({
+        gradeDistribution: distChart.success ? distChart.chart : null,
+        attendance: attChart.success ? attChart.chart : null,
+        classPerformance: perfChart.success ? perfChart.chart : null,
+      });
+    } catch (error) {
+      console.error('Failed to load backend charts:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
   const getGradeDistributionData = () => {
     const distribution = { A: 0, B: 0, C: 0, D: 0, F: 0 };
     grades.forEach((grade) => {
@@ -102,9 +142,47 @@ export function VisualReports({ students, grades, attendance }: VisualReportsPro
 
   return (
     <div>
-      <h2 className="mb-6 text-indigo-900">Visual Reports</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-indigo-900">Visual Reports</h2>
+        <button
+          onClick={() => setShowBackendCharts(!showBackendCharts)}
+          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+        >
+          {showBackendCharts ? 'Show Frontend Charts' : 'Show Backend Charts (NumPy/Matplotlib)'}
+        </button>
+      </div>
 
-      {grades.length === 0 && attendance.length === 0 ? (
+      {showBackendCharts ? (
+        <div className="space-y-6">
+          <div className="card">
+            <h3 className="text-xl font-semibold text-indigo-900 mb-4">Backend-Generated Charts</h3>
+            {loading ? (
+              <div className="text-center py-12">Loading charts from backend...</div>
+            ) : (
+              <div className="space-y-6">
+                {charts.gradeDistribution && (
+                  <div>
+                    <h4 className="font-medium mb-2">Grade Distribution (Matplotlib)</h4>
+                    <img src={charts.gradeDistribution} alt="Grade Distribution" className="w-full rounded-lg shadow" />
+                  </div>
+                )}
+                {charts.attendance && (
+                  <div>
+                    <h4 className="font-medium mb-2">Attendance Statistics (Matplotlib)</h4>
+                    <img src={charts.attendance} alt="Attendance" className="w-full rounded-lg shadow" />
+                  </div>
+                )}
+                {charts.classPerformance && (
+                  <div>
+                    <h4 className="font-medium mb-2">Class Performance (Matplotlib)</h4>
+                    <img src={charts.classPerformance} alt="Class Performance" className="w-full rounded-lg shadow" />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : grades.length === 0 && attendance.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
           <PieChart className="w-16 h-16 mx-auto mb-4 opacity-50" />
           <p>No data available for reports. Add grades and attendance records first.</p>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Student } from '../App';
 import { Plus, Edit2, Trash2, Save, X, Users } from 'lucide-react';
+import api from '../services/api';
 
 interface StudentManagementProps {
   students: Student[];
@@ -16,25 +17,51 @@ export function StudentManagement({ students, setStudents }: StudentManagementPr
     course: '',
     enrollmentDate: new Date().toISOString().split('T')[0],
   });
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingId) {
-      setStudents(
-        students.map((s) =>
-          s.id === editingId ? { ...formData, id: editingId } : s
-        )
-      );
-      setEditingId(null);
-    } else {
-      const newStudent: Student = {
-        ...formData,
-        id: Date.now().toString(),
-      };
-      setStudents([...students, newStudent]);
-      setIsAdding(false);
+    setLoading(true);
+    
+    try {
+      if (editingId) {
+        // Update existing student
+        const response = await api.updateStudent(editingId, {
+          name: formData.name,
+          email: formData.email,
+          course: formData.course,
+          enrollmentDate: formData.enrollmentDate,
+        });
+        
+        if (response.success) {
+          setStudents(students.map((s) => s.id === editingId ? response.student : s));
+          setEditingId(null);
+          alert('Student updated successfully!');
+        }
+      } else {
+        // Add new student
+        const newStudent = {
+          id: 'S' + Date.now().toString().slice(-6),
+          name: formData.name,
+          email: formData.email,
+          course: formData.course,
+          enrollmentDate: formData.enrollmentDate,
+        };
+        
+        const response = await api.addStudent(newStudent);
+        
+        if (response.success) {
+          setStudents([...students, response.student]);
+          setIsAdding(false);
+          alert('Student added successfully!');
+        }
+      }
+      setFormData({ name: '', email: '', course: '', enrollmentDate: new Date().toISOString().split('T')[0] });
+    } catch (error: any) {
+      alert('Error: ' + (error.message || 'Failed to save student'));
+    } finally {
+      setLoading(false);
     }
-    setFormData({ name: '', email: '', course: '', enrollmentDate: new Date().toISOString().split('T')[0] });
   };
 
   const handleEdit = (student: Student) => {
@@ -48,9 +75,21 @@ export function StudentManagement({ students, setStudents }: StudentManagementPr
     setIsAdding(false);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this student?')) {
-      setStudents(students.filter((s) => s.id !== id));
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this student?')) return;
+    
+    setLoading(true);
+    try {
+      const response = await api.deleteStudent(id);
+      
+      if (response.success) {
+        setStudents(students.filter((s) => s.id !== id));
+        alert('Student deleted successfully!');
+      }
+    } catch (error: any) {
+      alert('Error: ' + (error.message || 'Failed to delete student'));
+    } finally {
+      setLoading(false);
     }
   };
 
